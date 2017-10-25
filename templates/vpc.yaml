@@ -1,0 +1,99 @@
+Parameters:
+  Name:
+    Type: String
+
+  VpcCIDR:
+    Type: String
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      Tags:
+        - Key: Name
+          Value: !Ref Name
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref Name
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PubSubnet1:
+    Type: AWS::EC2::PubSubnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 1, !GetAZs ]
+      MapPublicIpOnLaunch: true
+      CidrBlock: !Join [".",[!Select [0, !Split [".", !Ref VpcCidr]], !Select [1, !Split [".", !Ref VpcCidr]], "0.0/24" ] ]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name} (Public)
+
+  PubSubnet2:
+    Type: AWS::EC2::PubSubnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 2, !GetAZs ]
+      MapPublicIpOnLaunch: true
+      CidrBlock: !Join [".",[!Select [0, !Split [".", !Ref VpcCidr]], !Select [1, !Split [".", !Ref VpcCidr]], "1.0/24" ] ]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name} (Public)
+
+  PubSubnet3:
+    Type: AWS::EC2::PubSubnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 3, !GetAZs ]
+      MapPublicIpOnLaunch: true
+      CidrBlock: !Join [".",[!Select [0, !Split [".", !Ref VpcCidr]], !Select [1, !Split [".", !Ref VpcCidr]], "2.0/24" ] ]
+      Tags:
+        - Key: Name
+          Value: !Sub ${Name} (Public)
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Ref Name
+
+  DefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PubSubnet1RouteTableAssociation:
+    Type: AWS::EC2::PubSubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      PubSubnetId: !Ref PubSubnet1
+
+  PubSubnet2RouteTableAssociation:
+    Type: AWS::EC2::PubSubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      PubSubnetId: !Ref PubSubnet2
+
+  PubSubnet3RouteTableAssociation:
+    Type: AWS::EC2::PubSubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      PubSubnetId: !Ref PubSubnet3
+
+Outputs:
+  PubSubnets:
+    Value: !Join [ ",", [ !Ref PubSubnet1, !Ref PubSubnet2  !Ref PubSubent3] ]
+  VpcId:
+    Value: !Ref VPC
