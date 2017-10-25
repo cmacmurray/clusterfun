@@ -55,7 +55,7 @@ Resources:
   Cluster:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub "https://s3.amazonaws.com/${StackConfigurationBucket}/${StackBuildId}/cloudformation/ecs-cluster.yaml"
+      TemplateURL: !Sub "https://s3.amazonaws.com/${StackConfigurationBucket}/${StackBuildId}/cloudformation/templates/ecs-cluster.yaml"
       Parameters:
         SourceSecurityGroup: !GetAtt LoadBalancer.Outputs.SecurityGroup
         Subnets: !GetAtt VPC.Outputs.Subnets
@@ -64,7 +64,7 @@ Resources:
   DeploymentPipeline:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub "https://s3.amazonaws.com/${StackConfigurationBucket}/${StackBuildId}/cloudformation/deployment-pipeline.yaml"
+      TemplateURL: !Sub "https://s3.amazonaws.com/${StackConfigurationBucket}/${StackBuildId}/cloudformation/templates/deployment-pipeline.yaml"
       Parameters:
         Cluster: !GetAtt Cluster.Outputs.ClusterName
         GitHubUser: !Ref GitHubUser
@@ -77,7 +77,7 @@ Resources:
   LoadBalancer:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub "https://s3.amazonaws.com/${StackConfigurationBucket}/${StackBuildId}/cloudformation/load-balancer.yaml"
+      TemplateURL: !Sub "https://s3.amazonaws.com/${StackConfigurationBucket}/${StackBuildId}/cloudformation/templates/load-balancer.yaml"
       Parameters:
         Subnets: !GetAtt VPC.Outputs.Subnets
         VpcId: !GetAtt VPC.Outputs.VpcId
@@ -85,7 +85,7 @@ Resources:
   VPC:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub "https://s3.amazonaws.com/${StackConfigurationBucket}/${StackBuildId}/cloudformation/vpc.yaml"
+      TemplateURL: !Sub "https://s3.amazonaws.com/${StackConfigurationBucket}/${StackBuildId}/cloudformation/templates/vpc.yaml"
       Parameters:
         Name: !Ref AWS::StackName
         VpcCIDR: 10.215.0.0/16
