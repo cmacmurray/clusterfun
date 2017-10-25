@@ -1,0 +1,34 @@
+{
+    "Parameters": {
+         "SshKeyName": "GoBuckEyes",
+         "TrustedNetworkCidr": "0.0.0.0/0",
+         "VpcCidr" : "10.225.0.0/16",
+         "DatabaseNodeType": "db.t2.small",
+         "DatabaseUsername": "MDToor",
+         "DatabaseMasterUserPassword": "TEWctwGuorcoqdaCSUYtF",
+         "LoggingDomainName": "staing-fmg-api",
+         "LogstashInstanceType": "t2.medium",
+         "LogstashVolumeSize": "32",
+         "ElasticsearchInstanceCount": "2",
+         "ElasticsearchDedicatedMasterCount": "3",
+         "LogstashNodesMinSize": "2",
+         "LogstashNodesMaxSize": "4",
+         "KibanaProxyNodesMinSize": "1",
+         "KibanaProxyNodesMaxSize": "3",
+         "ElasticsearchDomainName": "staging-fmg-api-elasticsearch",
+         "MetaDataAppContainerName": "StagingVmhMetaDataaApp",
+         "MetaDataAppContainerBuilderName": "StagingVmhMetaDataContainerBuilder",
+         "ProfilerAppContainerName": "StagingVmhProfilerApp",
+         "ProfilerAppContainerBuilderName": "StagingVmhProfilerContainerBuilder",
+         "TVSSAppContainerName": "StagingVmhTVSSApp",
+         "TVSSAppContainerBuilderName": "StagingVmhTVSSContainerBuilder",
+         "DeployBranch":  "staging",
+         "RepoOwner":     "univision",
+         "GitRepo":       "vmh-metadata-service",
+         "OAuthToken":       "4bb71c68bf945524f6c74a159f1190231db442e5",
+         "AppCertificateArn": "arn:aws:acm:us-east-2:127705864914:certificate/d694b2d3-cd66-4efb-a72c-2d4ff3aab60a"
+         
+    }
+
+
+}

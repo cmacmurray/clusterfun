@@ -1,0 +1,16 @@
+version: 0.1
+
+phases:
+  install:
+    commands:
+      - pip install -r requirements.txt
+  build:
+    commands:
+      - python manage.py create_bundle --validate --initiator=`echo ${CODEBUILD_INITIATOR} | awk '{split($0,array,"/"); print array[2]}'` --id="${CODEBUILD_RESOLVED_SOURCE_VERSION}"
+      - aws configure set s3.signature_version s3v4
+      - aws s3 cp --recursive build s3://`echo ${CODEBUILD_INITIATOR} | awk '{split($0,array,"/"); print array[2]}'`/${CODEBUILD_RESOLVED_SOURCE_VERSION}
+artifacts:
+  files:
+    - build/cloudformation/main.yaml
+    - build/configs/*
+  discard-paths: yes

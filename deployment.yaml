@@ -1,0 +1,358 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Generic Infrastructre Deplay App G.I.D.A Monster
+Parameters:
+  CodepipelineStackName:
+    Type: String
+  BranchName:
+    Type: String
+  RepoName:
+    Type: String
+  OwnerName:
+    Type: String
+  OAuthToken:
+    Type: String
+Resources:
+  CodepipelineS3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Sub codepipeline-${CodepipelineStackName}
+  CloudformationS3Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Ref CodepipelineStackName
+  CodepipelineS3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref CodepipelineS3Bucket
+      PolicyDocument:
+        Statement:
+            - Sid: DenyUnEncryptedObjectUploads
+              Effect: Deny
+              Principal: '*'
+              Action: s3:PutObject
+              Resource: !Sub "arn:aws:s3:::codepipeline-${CodepipelineStackName}/*"
+              Condition:
+                StringNotEquals:
+                  s3:x-amz-server-side-encryption: aws:kms
+            - Sid: DenyInsecureConnections
+              Effect: Deny
+              Principal: '*'
+              Action: s3:*
+              Resource: !Sub "arn:aws:s3:::codepipeline-${CodepipelineStackName}/*"
+              Condition:
+                Bool:
+                  aws:SecureTransport: 'false'
+  PipelineKMS:
+    Type: "AWS::KMS::Key"
+    Properties:
+      Description: !Sub ${CodepipelineStackName} infrastructure pipeline
+      Enabled: true
+      EnableKeyRotation: false
+      KeyPolicy:
+        "Fn::Sub": |
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                {
+                    "Sid": "Enable IAM User Permissions",
+                    "Effect": "Allow",
+                    "Principal": {
+                      "AWS": "arn:aws:iam::${AWS::AccountId}:root"
+                    },
+                    "Action": "kms:*",
+                    "Resource": "*"
+                }
+                ]
+              }
+  IAMCodeBuilderRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - codebuild.amazonaws.com
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+      - PolicyDocument:
+          Statement:
+            - Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Effect: Allow
+              Resource:
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${CodepipelineStackName}"
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${CodepipelineStackName}:*"
+            - Action:
+                - kms:DescribeKey
+                - kms:GenerateDataKey*
+                - kms:Encrypt
+                - kms:ReEncrypt*
+                - kms:Decrypt
+              Resource: !GetAtt PipelineKMS.Arn
+              Effect: Allow
+            - Action:
+                - s3:PutObject
+                - s3:GetObject
+                - s3:GetObjectVersion
+              Effect: Allow
+              Resource:
+                - !Sub "arn:aws:s3:::codepipeline-${CodepipelineStackName}/*"
+                - !Sub "arn:aws:s3:::${CodepipelineStackName}/*"
+            - Action: s3:PutObject
+              Effect: Allow
+              Resource: !Sub "arn:aws:s3:::${CodepipelineStackName}/*"
+            - Action: cloudformation:ValidateTemplate
+              Effect: Allow
+              Resource: '*'
+          Version: '2012-10-17'
+        PolicyName: root
+    Type: AWS::IAM::Role
+  IAMCodePipelineRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - codepipeline.amazonaws.com
+        Version: '2012-10-17'
+      Path: /
+      Policies:
+      - PolicyDocument:
+          Statement:
+            - Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:GetBucketVersioning
+              Resource: '*'
+              Effect: Allow
+            - Action:
+              - kms:DescribeKey
+              - kms:GenerateDataKey*
+              - kms:Encrypt
+              - kms:ReEncrypt*
+              - kms:Decrypt
+              Resource: !GetAtt PipelineKMS.Arn
+              Effect: Allow
+            - Action:
+              - s3:PutObject
+              Resource:
+              - arn:aws:s3:::codepipeline*
+              - arn:aws:s3:::elasticbeanstalk*
+              Effect: Allow
+            - Action:
+              - codecommit:CancelUploadArchive
+              - codecommit:GetBranch
+              - codecommit:GetCommit
+              - codecommit:GetUploadArchiveStatus
+              - codecommit:UploadArchive
+              Resource: '*'
+              Effect: Allow
+            - Action:
+              - codedeploy:CreateDeployment
+              - codedeploy:GetApplicationRevision
+              - codedeploy:GetDeployment
+              - codedeploy:GetDeploymentConfig
+              - codedeploy:RegisterApplicationRevision
+              Resource: '*'
+              Effect: Allow
+            - Action:
+              - elasticbeanstalk:*
+              - ec2:*
+              - elasticloadbalancing:*
+              - autoscaling:*
+              - cloudwatch:*
+              - s3:*
+              - sns:*
+              - cloudformation:*
+              - rds:*
+              - sqs:*
+              - ecs:*
+              - iam:PassRole
+              Resource: '*'
+              Effect: Allow
+            - Action:
+              - lambda:InvokeFunction
+              - lambda:ListFunctions
+              Resource: '*'
+              Effect: Allow
+            - Action:
+              - opsworks:CreateDeployment
+              - opsworks:DescribeApps
+              - opsworks:DescribeCommands
+              - opsworks:DescribeDeployments
+              - opsworks:DescribeInstances
+              - opsworks:DescribeStacks
+              - opsworks:UpdateApp
+              - opsworks:UpdateStack
+              Resource: '*'
+              Effect: Allow
+            - Action:
+              - cloudformation:CreateStack
+              - cloudformation:DeleteStack
+              - cloudformation:DescribeStacks
+              - cloudformation:UpdateStack
+              - cloudformation:CreateChangeSet
+              - cloudformation:DeleteChangeSet
+              - cloudformation:DescribeChangeSet
+              - cloudformation:ExecuteChangeSet
+              - cloudformation:SetStackPolicy
+              - cloudformation:ValidateTemplate
+              - iam:PassRole
+              Resource: '*'
+              Effect: Allow
+            - Action:
+              - codebuild:BatchGetBuilds
+              - codebuild:StartBuild
+              Resource: '*'
+              Effect: Allow
+          Version: '2012-10-17'
+        PolicyName: root
+    Type: AWS::IAM::Role
+  IAMCloudFormationActionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - cloudformation.amazonaws.com
+        Version: '2012-10-17'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  IAMCloudFormationDeployRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - cloudformation.amazonaws.com
+        Version: '2012-10-17'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+  CloudformationTemplateBuilder:
+    Type: "AWS::CodeBuild::Project"
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Description: |
+            Builder for creating the cloudformation templates
+            and uploading them to their s3 location.
+      EncryptionKey: !Ref PipelineKMS
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables:
+          - Name: INFRASTRUCTURE_STAGE
+            Value: prod
+        Image: aws/codebuild/ubuntu-base:14.04
+        Type: LINUX_CONTAINER
+      Name: !Ref CodepipelineStackName 
+      ServiceRole: !Ref IAMCodeBuilderRole
+      Source:
+        Type: CODEPIPELINE
+      TimeoutInMinutes: 60
+  CodePipeline:
+    Type: "AWS::CodePipeline::Pipeline"
+    Properties:
+      ArtifactStore:
+        EncryptionKey:
+          Id: !Ref PipelineKMS
+          Type: KMS
+        Location: !Ref CodepipelineS3Bucket
+        Type: S3
+      Name: !Ref CodepipelineStackName
+      RestartExecutionOnUpdate: true
+      RoleArn: !GetAtt IAMCodePipelineRole.Arn
+      Stages:
+        -
+          Actions:
+            -
+              ActionTypeId:
+                Category: Source
+                Owner: ThirdParty
+                Provider: GitHub
+                Version: 1
+              Name: !Ref CodepipelineStackName 
+              Configuration:
+                Branch: !Ref BranchName
+                Owner: !Ref OwnerName
+                Repo: !Ref RepoName
+                OAuthToken: !Ref OAuthToken
+              OutputArtifacts:
+                - Name: CfTemplates
+          Name: Source
+        -
+          Actions:
+            -
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Provider: CodeBuild
+                Version: 1
+              Name: cloudformation-builder
+              Configuration:
+                ProjectName: !Ref CodepipelineStackName
+              InputArtifacts:
+                - Name: CfTemplates
+              OutputArtifacts:
+                - Name: BuiltCfTemplates
+          Name: Build
+        -
+          Actions:
+            -
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              Name: CreateChangeSet
+              Configuration:
+                ActionMode: CHANGE_SET_REPLACE
+                ChangeSetName: !Sub "${CodepipelineStackName}-changeset"
+                StackName: !Ref CodepipelineStackName
+                TemplatePath: BuiltCfTemplates::main.yaml
+                TemplateConfiguration: !Sub BuiltCfTemplates::${BranchName}-config.json
+                Capabilities: CAPABILITY_NAMED_IAM
+                RoleArn: !GetAtt IAMCloudFormationActionRole.Arn
+              InputArtifacts:
+                - Name: BuiltCfTemplates
+              RunOrder: 1
+            -
+              ActionTypeId:
+                Category: Approval
+                Owner: AWS
+                Provider: Manual
+                Version: 1
+              Name: Approve
+              RunOrder: 2
+            -
+              ActionTypeId:
+                Category: Deploy
+                Owner: AWS
+                Provider: CloudFormation
+                Version: 1
+              Name: ExecuteChangeSet
+              Configuration:
+                ActionMode: CHANGE_SET_EXECUTE
+                ChangeSetName: !Sub "${CodepipelineStackName}-changeset"
+                StackName: !Ref CodepipelineStackName
+                Capabilities: CAPABILITY_NAMED_IAM
+                RoleArn: !GetAtt IAMCloudFormationActionRole.Arn
+              RunOrder: 3
+          Name: Deployment

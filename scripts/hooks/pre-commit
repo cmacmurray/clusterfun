@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+echo "Validating CloudFormation templates (requires AWSCLI + credential setup)"
+./scripts/validate
+

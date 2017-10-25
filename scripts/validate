@@ -1,0 +1,4 @@
+#!/bin/sh -e
+# CloudFormation validator, mirroring CodeBuild validation
+
+python manage.py validate
