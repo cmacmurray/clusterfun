@@ -1,7 +1,7 @@
 Description: >
   This template illustrates how to use AWS CodeBuild and AWS CodePipeline to
   achieve continuous deployment of source code from a GitHub repository via a
-  Docker container to an Amazon EC2 Container Service cluster.
+  Docker container to an Amazon EC2 Container Service clusterplit
 
 
 Parameters:
@@ -24,6 +24,11 @@ Parameters:
     Description: >
       Token for the user specified above. (https://github.com/settings/tokens)
 
+  StackConfigurationBucket:
+    Type: String
+
+  StackBuildId:
+    Type: String
 
 Metadata:
   AWS::CloudFormation::Interface:
